@@ -1,0 +1,39 @@
+.env
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+build/
+
+# Local environment variables
+.env
+.env.*.local
+
+# Logs
+logs
+*.log
+lerna-debug.log
+
+# Editor settings
+.vscode/
+.idea/
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Vitest coverage output
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+# Ignore lockfile if you want purely yarn.lock-based workflow
+# package-lock.json
