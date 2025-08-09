@@ -14,13 +14,15 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
+    "@xenova/transformers": "^2.17.2",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/bot.js",
-    "dev": "ts-node src/bot.ts",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
     "test": "NODE_ENV=test vitest",
     "deploy:cmds": "ts-node src/deploy-commands.ts"
   }
