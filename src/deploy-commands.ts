@@ -1,4 +1,5 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { suggestCmd, prefsCmd, libraryCmd, accountCmd } from './commands';
 
 const commands = [
   new SlashCommandBuilder()
@@ -26,7 +27,11 @@ const commands = [
       option.setName("anzahl")
         .setDescription("Wie viele Einträge?")
         .setRequired(false)
-    ).toJSON()
+    ).toJSON(),
+  suggestCmd.toJSON(),
+  prefsCmd.toJSON(),
+  libraryCmd.toJSON(),
+  accountCmd.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);

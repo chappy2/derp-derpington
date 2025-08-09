@@ -37,3 +37,5 @@ temp/
 
 # Ignore lockfile if you want purely yarn.lock-based workflow
 # package-lock.json
+
+/src/generated/prisma
