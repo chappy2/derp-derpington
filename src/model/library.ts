@@ -1,18 +1,10 @@
+import { GAME_DATA_UPDATE_INTERVAL_IN_DAYS } from '../config.js';
 import { dbInstance } from './pool.js';
-
+import { Game, GameData, MultiplayerData, Playtimes, Ranking, Tags } from './types.js';
 /**
  * Ensure a game exists in the catalog
  */
-export const ensureGame = async (appId: number, name: string, extras?: Partial<{
-  type: string;
-  is_free: boolean;
-  tags_json: any;
-  players_min: number;
-  players_max: number;
-  crossplay: boolean;
-  price_cents: number;
-  currency: string;
-}>) => {
+export const ensureGame = async (appId: number, name: string, extras?: Partial<GameData>) => {
   await dbInstance('games')
     .insert({
       app_id: appId,
@@ -76,6 +68,9 @@ export const getGamesForUser = async (discordUserId: string) => {
       'games.crossplay',
       'games.price_cents',
       'games.currency',
+      'games.rating',
+      'games.rating_updated_at',
+      'games.game_details_updated_at',
       'ownership.playtime_forever',
       'ownership.last_played'
     );
@@ -101,6 +96,9 @@ export const getCommonGames = async (userIds: string[]) => {
       'g.players_max',
       'g.crossplay',
       'g.price_cents',
+      'games.rating',
+      'games.rating_updated_at',
+      'games.game_details_updated_at',
       'g.currency'
     )
     .havingRaw('COUNT(DISTINCT o.discord_user_id) = ?', [userIds.length])
@@ -114,22 +112,40 @@ export const getCommonGames = async (userIds: string[]) => {
       'g.players_max',
       'g.crossplay',
       'g.price_cents',
+      'games.rating',
+      'games.rating_updated_at',
+      'games.game_details_updated_at',
       'g.currency'
     );
 }
 
-export const getMissing = async (limit: number = 50) => {
+export const getMissingGameDetails = async (limit: number = 50) => {
   return await dbInstance('games')
-    .whereNull('price_cents')
-    .orWhereNull('tags_json')
+    .where(function () {
+      this.whereNull('type').orWhereNull('tags_json').orWhereNull('game_details_updated_at')
+        .orWhere('game_details_updated_at', '<', dbInstance.raw('DATE_SUB(NOW(), INTERVAL 7 DAY)'));
+    })
+
     .limit(limit);
 }
 
-export const updateGameDetails = async (app_id, details: any) => {
+export const getMissingRating = async (limit: number = 50) => {
+  return await dbInstance('games')
+    .whereNull('rating')
+    .orWhereNull('rating_updated_at')
+    .orWhere('rating_updated_at', '<', dbInstance.raw('DATE_SUB(NOW(), INTERVAL 7 DAY)'))
+    .limit(limit);
+}
+export const updateGameRankings = async (app_id: number, rating: Ranking) => {
+  return await dbInstance('games')
+    .where({ app_id: app_id })
+    .update(rating);
+}
+export const updateGameDetails = async (app_id, details: any) => { //details is from Steam API get Type from there
   if (!details) {
     return;
   }
-  const parsed=parseGame(details)
+  const parsed = parseGame(details)
   return await dbInstance('games')
     .where({ app_id: app_id })
     .update({
@@ -147,18 +163,7 @@ export const updateGameDetails = async (app_id, details: any) => {
     });
 }
 // Insert/update multiple games
-export const upsertGames = async (rows: Array<{
-  app_id: number;
-  name: string;
-  type?: string | null;
-  is_free?: boolean;
-  tags_json?: any;
-  players_min?: number | null;
-  players_max?: number | null;
-  crossplay?: boolean | null;
-  price_cents?: number | null;
-  currency?: string | null;
-}>) => {
+export const upsertGames = async (rows: Array<Game>) => {
   for (const g of rows) {
     await dbInstance('games')
       .insert({
@@ -171,6 +176,9 @@ export const upsertGames = async (rows: Array<{
         players_max: g.players_max ?? null,
         crossplay: g.crossplay ?? null,
         price_cents: g.price_cents ?? null,
+        rating: g.rating ?? null,
+        rating_updated_at: g.rating_updated_at ?? null,
+        game_details_updated_at: g.game_details_updated_at ?? null,
         currency: g.currency ?? null,
       })
       .onConflict('app_id')
@@ -183,6 +191,9 @@ export const upsertGames = async (rows: Array<{
         players_max: g.players_max ?? null,
         crossplay: g.crossplay ?? null,
         price_cents: g.price_cents ?? null,
+        rating: g.rating ?? null,
+        rating_updated_at: g.rating_updated_at ?? null,
+        game_details_updated_at: g.game_details_updated_at ?? null,
         currency: g.currency ?? null,
       });
   }
@@ -191,7 +202,7 @@ export const upsertGames = async (rows: Array<{
 // Link ownership entries for a user (upsert)
 export const upsertOwnership = async (
   discordUserId: string,
-  items: Array<{ app_id: number; playtime_forever?: number | null; last_played?: Date | null }>
+  items: Array<Playtimes>
 ) => {
   for (const it of items) {
     await dbInstance('ownership')
@@ -209,16 +220,8 @@ export const upsertOwnership = async (
   }
 }
 
-type GameMeta = {
-  genres?: string[];
-  categories?: string[];
-};
 
-type ParsedGame = {
-  players_min: number | null;
-  players_max: number | null;
-  crossplay: boolean | null;
-};
+
 
 const normalize = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]/g, ""); // remove spaces, dashes, slashes, punctuation
@@ -232,7 +235,7 @@ const REGEXES = {
   exact: /(?:^|\b)(\d+)\s*players?\b/i,                // 4 players, 2 player
 };
 
-export const parseGame = (meta: GameMeta): ParsedGame => {
+export const parseGame = (meta: Tags): MultiplayerData => {
   const categories = meta.categories ?? [];
   const normSet = new Set(categories.map(normalize));
 

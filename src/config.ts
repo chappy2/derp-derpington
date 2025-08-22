@@ -1,0 +1,1 @@
+export const GAME_DATA_UPDATE_INTERVAL_IN_DAYS = 7;

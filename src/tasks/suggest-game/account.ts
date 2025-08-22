@@ -1,7 +1,7 @@
 // src/handlers/account.ts (only using steam client; keeping logic elsewhere)
 import { ChatInputCommandInteraction } from 'discord.js';
 import { getSteamService } from '../../integrations/steam/index.js';
-import * as db from '../../integrations/db/index.js';
+import * as db from '../../model/index.js';
  
 
 export const  handleAccount=async(inter: ChatInputCommandInteraction) =>{
@@ -19,7 +19,6 @@ export const  handleAccount=async(inter: ChatInputCommandInteraction) =>{
     }
 
     if (sub === 'status') {
-        console.log(inter.user)
         const steamUser=await db.getSteamAccount(inter.user.id)
         const owned = await steam.getOwnedGames(steamUser.steam_id64);
         return inter.reply({ ephemeral: true, content: `Owned games: ${owned.game_count}` });

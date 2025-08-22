@@ -15,12 +15,15 @@ export const suggestCmd = new SlashCommandBuilder()
     o.setName('player3').setDescription('Third player discord name').setRequired(false))
   .addUserOption(o =>
     o.setName('player4').setDescription('Fourth player discord name').setRequired(false))
-  .addIntegerOption(o =>
-    o.setName('min_players').setDescription('Minimum players'))
-  .addIntegerOption(o =>
-    o.setName('max_players').setDescription('Maximum players'))
   .addStringOption(o =>
     o.setName('genre').setDescription('Genre (autocomplete)').setAutocomplete(true))
+  .addStringOption(o =>
+    o.setName('order_by').setDescription('Preferred order').addChoices(
+      { name: 'Rating', value: 'rating' },
+      { name: 'Owners', value: 'owners' },
+      { name: 'Playtime', value: 'playtime' },
+      { name: 'Name', value: 'name' },
+    ))
   .addStringOption(o =>
     o.setName('owned_by')
      .setDescription('Ownership rule')
@@ -28,6 +31,12 @@ export const suggestCmd = new SlashCommandBuilder()
        { name: 'all (intersection)', value: 'all' },
        { name: 'any (union)', value: 'any' },
      ))
+  .addStringOption(o =>
+    o.setName('order_dir').setDescription('Sort direction')
+      .addChoices(
+        { name: 'Ascending', value: 'asc' },
+        { name: 'Descending', value: 'desc' },
+      ))
   .addIntegerOption(o =>
     o.setName('max_price').setDescription('Max price (EUR)'))
   .addBooleanOption(o =>

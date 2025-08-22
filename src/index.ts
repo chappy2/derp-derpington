@@ -2,13 +2,9 @@ import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction, Command
 import * as dotenv from 'dotenv';
 import cron from 'node-cron';
 
-import { handleTeams } from './tasks/teams-generator.js';
-import { handleDrawChallenge } from './tasks/draw-challenge.js';
-import { handleAccount } from './tasks/suggest-game/account.js';
-import { handleLibrary } from './tasks/suggest-game/library.js';
-import { handlePrefs } from './tasks/suggest-game/preferences.js';
-import { handleSuggest } from './tasks/suggest-game/suggestions.js';
-import { enrichMissingGames } from './worker.js';
+import { handleTeams, handleDrawChallenge, handleAccount, handleLibrary, handlePrefs, handleSuggest } from './tasks/index.js';
+
+import { enrichGameDetails, enrichGameRatings } from './workers/index.js';
 dotenv.config();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -31,7 +27,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 content: 'Diese Interaktion ist kein Chat-Eingabebefehl.',
                 ephemeral: true,
             });
-        } else {console.log(interaction)
+        } else {
+            //console.log(interaction)
             console.warn('Nicht-replizierbare Interaktion:', interaction.type);
             return;
         }
@@ -58,6 +55,11 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 cron.schedule('*/5 * * * *', async () => {
-  console.log('[CRON] Enriching missing games...');
-  await enrichMissingGames(100); // process 50 at a time
+    console.log('[CRON] Enriching game details...');
+    await enrichGameDetails(100); // process 50 at a time
+});
+
+cron.schedule('*/5 * * * *', async () => {
+    console.log('[CRON] Enriching ranking details...');
+    await enrichGameRatings(100); // process 50 at a time
 });

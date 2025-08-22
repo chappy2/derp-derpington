@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, User } from 'discord.js';
 import { getSteamService } from '../../integrations/steam/index.js';
-import * as db from '../../integrations/db/index.js';
+import * as db from '../../model/index.js';
 
 export const handleLibrary = async (inter: ChatInputCommandInteraction) => {
     const sub = inter.options.getSubcommand(true);
@@ -13,25 +13,7 @@ export const handleLibrary = async (inter: ChatInputCommandInteraction) => {
         const steamUser = await db.getSteamAccount(inter.user.id)
         const owned = await steam.getOwnedGames(steamUser.steam_id64);
         // Upsert game catalog rows
-        /*
-              appid: 107100,
-      name: 'Bastion',
-      playtime_forever: 0,
-      img_icon_url: '8377b4460f19465c261673f76f2656bdb3288273',
-      has_community_visible_stats: true,
-      playtime_windows_forever: 0,
-      playtime_mac_forever: 0,
-      playtime_linux_forever: 0,
-      playtime_deck_forever: 0,
-      rtime_last_played: 0,
-      playtime_disconnected: 0
-      
-      add db fields:
-       - img_icon_url
-       - rtime_last_played
 
-     dont resync everything for games table -> only if not exists. the real values are in appinfo
-        */
         await db.upsertGames(
             owned.games.map(g => ({
                 app_id: g.appid,
@@ -43,7 +25,7 @@ export const handleLibrary = async (inter: ChatInputCommandInteraction) => {
                 crossplay: null,
                 price_cents: null,
                 currency: null,
-            }))
+            } as db.Game))
         );
 
         // Link ownership for the caller

@@ -44,6 +44,9 @@ export const ensureSchema = async (db) => {
             t.integer('players_max').nullable();
             t.boolean('crossplay').nullable();
             t.integer('price_cents').nullable();
+            t.integer('rating').nullable(); // 0-100
+            t.timestamp('rating_updated_at').nullable();
+            t.timestamp('game_details_updated_at').defaultTo(db.fn.now());
             t.string('currency', 3).nullable();
         });
         await safeIndex(db, 'games', ['is_free'], 'idx_games_is_free');

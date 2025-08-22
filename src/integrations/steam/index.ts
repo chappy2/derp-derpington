@@ -1,3 +1,6 @@
+export * from './service.js';
+export * from './types.js';
+
 import { SteamHttpService } from "./service.js";
 import { ISteamService } from "./types.js";
 

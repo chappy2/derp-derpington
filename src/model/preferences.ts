@@ -1,16 +1,11 @@
 import { dbInstance } from './pool.js';
 import { ensureUser } from './account.js';
+import { Preferences } from './types.js';
 
 
 export const setPrefs = async (
     discordUserId: string,
-    prefs: {
-        genre?: string | null;
-        min_players?: number | null;
-        max_players?: number | null;
-        crossplay?: boolean | null;
-        budget_cents?: number | null;
-    }
+    prefs: Preferences
 ) => {
     await ensureUser(discordUserId);
     await dbInstance('prefs')

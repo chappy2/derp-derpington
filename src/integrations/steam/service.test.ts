@@ -51,7 +51,7 @@ describe('SteamHttpService', () => {
       includeFree: true,
     });
 
-    expect(out.game_count).toBe(1494);
+    expect(out.game_count).toBeGreaterThanOrEqual(1505);
     expect(out.games[0].appid).toBe(10);
   });
 

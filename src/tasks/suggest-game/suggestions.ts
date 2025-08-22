@@ -1,6 +1,7 @@
-import { ChatInputCommandInteraction } from 'discord.js';
-import { getPrefsForUsers, getRankedGamesForAny, getCommonGamesForAll } from '../../integrations/db/suggestions.js';
-
+import { ChatInputCommandInteraction, Formatters } from 'discord.js';
+import { getPrefsForUsers, getRankedGamesForAny, getCommonGamesForAll } from '../../model/suggestions.js';
+import * as formatters from '../../formatters/index.js';
+import { SortDir, SuggestFilters, SuggestOptions, SuggestSort } from '../../model/types.js';
 
 export async function handleSuggest(inter: ChatInputCommandInteraction) {
   const users = [
@@ -15,10 +16,12 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
   }
 
   // explicit options (override prefs)
-  const opt_minPlayers = inter.options.getInteger('min_players') ?? undefined;
-  const opt_maxPlayers = inter.options.getInteger('max_players') ?? undefined;
+  //const opt_minPlayers = inter.options.getInteger('min_players') ?? undefined;
+  //const opt_maxPlayers = inter.options.getInteger('max_players') ?? undefined;
   const opt_genre = inter.options.getString('genre') ?? undefined;
   const opt_ownedBy = (inter.options.getString('owned_by') as 'all' | 'any' | null) ?? 'all';
+  const opt_orderBy = inter.options.getString('order_by') ?? 'rating';
+  const opt_sortDir = (inter.options.getString('order_dir') as 'asc' | 'desc' | null) ?? 'desc';
   const opt_maxPrice = inter.options.getInteger('max_price') ?? undefined;
   const opt_crossplay = inter.options.getBoolean('crossplay') ?? undefined;
 
@@ -33,36 +36,35 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
   // max_players: min of user maxes
   const pref_max = undefined //minDefined(prefs.map(p => p.max_players));
   // genre: most common non-null
-  const pref_genre = undefined //modeDefined(prefs.map(p => p.genre));
+  const pref_genre = modeDefined(prefs.map(p => p.genre));
   // crossplay: true if any user explicitly requires it (OR)
-  const pref_cross = undefined //anyTrue(prefs.map(p => p.crossplay));
+  const pref_cross = anyTrue(prefs.map(p => p.crossplay));
   // budget: min budget among users
-  const pref_budget_c = undefined //minDefined(prefs.map(p => p.budget_cents));
+  const pref_budget_c = minDefined(prefs.map(p => p.budget_cents));
 
-  const filters = {
-    min_players: opt_minPlayers ?? pref_min ?? undefined,
-    max_players: opt_maxPlayers ?? pref_max ?? undefined,
+  const filters: SuggestFilters = {
+    min_players: 1,//opt_minPlayers ?? pref_min ?? undefined,
+    max_players: users.length,//opt_maxPlayers ?? pref_max ?? undefined,
     genre: opt_genre ?? pref_genre ?? undefined,
     max_price_cents: (opt_maxPrice != null ? opt_maxPrice * 100 : undefined) ?? pref_budget_c ?? undefined,
     crossplay: opt_crossplay ?? pref_cross ?? undefined,
-  };
+  } as SuggestFilters;
+
+  const opts: SuggestOptions = {
+    sortBy: opt_orderBy as SuggestSort,
+    sortDir: opt_sortDir as SortDir,
+  } as SuggestOptions
 
   const rows =
     opt_ownedBy === 'any'
-      ? await getRankedGamesForAny(users, filters, 10)
-      : await getCommonGamesForAll(users, filters, 10);
+      ? await getRankedGamesForAny(users, filters, 10, opts)
+      : await getCommonGamesForAll(users, filters, 10, opts);
 
   if (!rows.length) {
     return inter.editReply('No matching games found. Try relaxing filters or set owned_by=any.');
   }
 
-  const lines = rows.map((g: any) => {
-    const price =
-      g.is_free ? 'free' : g.price_cents != null ? `${(g.price_cents / 100).toFixed(2)} ${g.currency ?? 'EUR'}` : '';
-    const players =
-      g.players_min && g.players_max ? ` — ${g.players_min}-${g.players_max} players` : '';
-    return `• **${g.name}** ${price ? `— ${price}` : ''}${players}`;
-  });
+  const lines = formatters.formatGameLines(rows);
 
   return inter.editReply(lines.join('\n'));
 }

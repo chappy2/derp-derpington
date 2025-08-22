@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, User } from 'discord.js';
-import * as db from '../../integrations/db/index.js';
+import * as db from '../../model/index.js';
+import { mention } from '../../formatters/generic.js';
 
 export const  handlePrefs=async(inter: ChatInputCommandInteraction) => {
   const sub = inter.options.getSubcommand(true);
@@ -57,6 +58,4 @@ export const  handlePrefs=async(inter: ChatInputCommandInteraction) => {
   return inter.reply({ ephemeral: true, content: 'Unknown subcommand.' });
 }
 
-function mention(u: User) {
-  return `<@${u.id}>`;
-}
+
