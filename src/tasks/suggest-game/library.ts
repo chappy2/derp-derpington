@@ -1,21 +1,37 @@
 import { ChatInputCommandInteraction, User } from 'discord.js';
-import { getSteamService } from '../../integrations/steam';
-import * as db from '../../integrations/db';
+import { getSteamService } from '../../integrations/steam/index.js';
+import * as db from '../../integrations/db/index.js';
 
 export const handleLibrary = async (inter: ChatInputCommandInteraction) => {
     const sub = inter.options.getSubcommand(true);
-    const steam = getSteamService(true); // fake for now
+    const steam = getSteamService();
 
     if (sub === 'sync') {
         await inter.deferReply({ ephemeral: true });
 
-        // In a real app you'd read the user's linked steam_id64 from your DB.
-        // For now, demo: derive a deterministic fake ID from the Discord user id.
-        const resolved = await steam.resolveSteamId(inter.user.id);
 
-        const owned = await steam.getOwnedGames(resolved.steamId64);
-
+        const steamUser = await db.getSteamAccount(inter.user.id)
+        const owned = await steam.getOwnedGames(steamUser.steam_id64);
         // Upsert game catalog rows
+        /*
+              appid: 107100,
+      name: 'Bastion',
+      playtime_forever: 0,
+      img_icon_url: '8377b4460f19465c261673f76f2656bdb3288273',
+      has_community_visible_stats: true,
+      playtime_windows_forever: 0,
+      playtime_mac_forever: 0,
+      playtime_linux_forever: 0,
+      playtime_deck_forever: 0,
+      rtime_last_played: 0,
+      playtime_disconnected: 0
+      
+      add db fields:
+       - img_icon_url
+       - rtime_last_played
+
+     dont resync everything for games table -> only if not exists. the real values are in appinfo
+        */
         await db.upsertGames(
             owned.games.map(g => ({
                 app_id: g.appid,
@@ -31,16 +47,18 @@ export const handleLibrary = async (inter: ChatInputCommandInteraction) => {
         );
 
         // Link ownership for the caller
+        // playtime can be updated
         await db.upsertOwnership(
             inter.user.id,
             owned.games.map(g => ({
                 app_id: g.appid,
                 playtime_forever: g.playtime_forever ?? 0,
-                last_played: null,
+                // todo parse to date
+                //last_played: g.rtime_last_played ?? 0,
             }))
         );
 
-        return inter.editReply(`✅ Synced ${owned.game_count} games (fake) for you.`);
+        return inter.editReply(`✅ Synced ${owned.game_count} games for you.`);
     }
 
     if (sub === 'stats') {

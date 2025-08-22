@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, User } from 'discord.js';
-import * as db from '../../integrations/db';
+import * as db from '../../integrations/db/index.js';
 
 export const  handlePrefs=async(inter: ChatInputCommandInteraction) => {
   const sub = inter.options.getSubcommand(true);

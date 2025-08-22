@@ -1,11 +1,7 @@
-import { SteamFakeService } from "./fake-service";
-import { SteamHttpService } from "./service";
-import { ISteamService } from "./types";
+import { SteamHttpService } from "./service.js";
+import { ISteamService } from "./types.js";
 
 
-export function getSteamService(fake=true): ISteamService {
-  if (fake) {
-    return new SteamFakeService();
-  }
+export function getSteamService(): ISteamService {
   return new SteamHttpService(); // requires STEAM_API_KEY
 }

@@ -1,5 +1,5 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-import { suggestCmd, prefsCmd, libraryCmd, accountCmd } from './commands';
+import { suggestCmd, prefsCmd, libraryCmd, accountCmd } from './commands.js';
 
 const commands = [
   new SlashCommandBuilder()
@@ -20,7 +20,7 @@ const commands = [
     .setDescription("Ziehe eine kreative Challenge.")
     .addStringOption(option =>
       option.setName("rubrik")
-        .setDescription("Welche Rubrik? (z. B. tierwesen, ort)")
+        .setDescription("Welche Rubrik? (z. B. tierwesen, ort)")
         .setRequired(false)
     )
     .addIntegerOption(option =>

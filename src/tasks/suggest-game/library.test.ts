@@ -23,8 +23,8 @@ vi.mock('../../integrations/steam/index', () => {
 });
 
 // import REAL db + handler (no db mocks)
-import * as db from '../../integrations/db';
-import { handleLibrary } from './library';
+import * as db from '../../integrations/db/index.js';
+import { handleLibrary } from './library.js';
 
 // minimal discord interaction mock
 function makeInteraction(
@@ -61,11 +61,13 @@ beforeEach(async () => {
   await db.dbInstance('users').del().catch(() => {});
 });
 
-describe('/library (integration, real DB)', () => {
+describe('/library', () => {
   it('sync writes to real DB and edits reply', async () => {
     const userId = '123456789012345678';
     // seed user so FK on ownership passes — if your code ensures user automatically, remove this line
     await db.dbInstance('users').insert({ discord_user_id: userId });
+    await db.dbInstance('steam_accounts').insert({ discord_user_id: userId, steam_id64:userId });
+
 
     const { inter, spies } = makeInteraction('sync', { userId });
     await handleLibrary(inter);
@@ -86,6 +88,7 @@ describe('/library (integration, real DB)', () => {
   it('stats returns no-games message before sync', async () => {
     const userId = '123456789012345678';
     await db.dbInstance('users').insert({ discord_user_id: userId });
+    await db.dbInstance('steam_accounts').insert({ discord_user_id: userId, steam_id64:userId });
 
     const { inter, spies } = makeInteraction('stats', { userId });
     await handleLibrary(inter);
@@ -99,6 +102,7 @@ describe('/library (integration, real DB)', () => {
   it('stats shows totals after sync', async () => {
     const userId = '123456789012345678';
     await db.dbInstance('users').insert({ discord_user_id: userId });
+    await db.dbInstance('steam_accounts').insert({ discord_user_id: userId, steam_id64:userId });
 
     // run sync first
     await handleLibrary(makeInteraction('sync', { userId }).inter);

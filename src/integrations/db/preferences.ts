@@ -1,5 +1,5 @@
-import { dbInstance } from './pool';
-import { ensureUser } from './account';
+import { dbInstance } from './pool.js';
+import { ensureUser } from './account.js';
 
 
 export const setPrefs = async (

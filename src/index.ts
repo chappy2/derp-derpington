@@ -1,10 +1,18 @@
 import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction, CommandInteraction } from 'discord.js';
 import * as dotenv from 'dotenv';
-import { handleTeams } from './tasks/teams-generator';
-import { handleDrawChallenge } from './tasks/draw-challenge';
+import cron from 'node-cron';
+
+import { handleTeams } from './tasks/teams-generator.js';
+import { handleDrawChallenge } from './tasks/draw-challenge.js';
+import { handleAccount } from './tasks/suggest-game/account.js';
+import { handleLibrary } from './tasks/suggest-game/library.js';
+import { handlePrefs } from './tasks/suggest-game/preferences.js';
+import { handleSuggest } from './tasks/suggest-game/suggestions.js';
+import { enrichMissingGames } from './worker.js';
 dotenv.config();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
 
 client.once(Events.ClientReady, async () => {
     console.log(`Angemeldet als ${client.user?.tag}`);
@@ -16,7 +24,6 @@ client.once(Events.ClientReady, async () => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-    console.log("sdfsdf")
     if (!interaction.isChatInputCommand()) {
         console.log(`❌ Unbekannte Interaktion: ${interaction.type}`);
         if (interaction.isRepliable?.()) {
@@ -24,7 +31,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 content: 'Diese Interaktion ist kein Chat-Eingabebefehl.',
                 ephemeral: true,
             });
-        } else {
+        } else {console.log(interaction)
             console.warn('Nicht-replizierbare Interaktion:', interaction.type);
             return;
         }
@@ -34,8 +41,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         case 'teams':
             return await handleTeams(interaction as ChatInputCommandInteraction);
         case 'draw-challenge':
-            console.log('draw-challenge interaction received');
             return await handleDrawChallenge(interaction as ChatInputCommandInteraction);
+        case 'account': await handleAccount(interaction); break;
+        case 'library': await handleLibrary(interaction); break;
+        case 'suggest': await handleSuggest(interaction); break;
+        case 'prefs': await handlePrefs(interaction); break;
         default:
             return interaction.reply({ content: 'Es tut mir Leide diese Aufgabe ist mir nicht bekannt. Dafür bin ich nicht zuständig.', ephemeral: true });
 
@@ -46,3 +56,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 if (process.env.NODE_ENV !== 'test') {
     client.login(process.env.DISCORD_TOKEN);
 }
+
+cron.schedule('*/5 * * * *', async () => {
+  console.log('[CRON] Enriching missing games...');
+  await enrichMissingGames(100); // process 50 at a time
+});

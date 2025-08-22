@@ -8,13 +8,13 @@ export const suggestCmd = new SlashCommandBuilder()
   .setName('suggest')
   .setDescription('Suggest games for a group')
   .addUserOption(o =>
-    o.setName('player1').setDescription('First player').setRequired(true))
+    o.setName('player1').setDescription('First player discord name').setRequired(true))
   .addUserOption(o =>
-    o.setName('player2').setDescription('Second player').setRequired(false))
+    o.setName('player2').setDescription('Second player discord name').setRequired(false))
   .addUserOption(o =>
-    o.setName('player3').setDescription('Third player').setRequired(false))
+    o.setName('player3').setDescription('Third player discord name').setRequired(false))
   .addUserOption(o =>
-    o.setName('player4').setDescription('Fourth player').setRequired(false))
+    o.setName('player4').setDescription('Fourth player discord name').setRequired(false))
   .addIntegerOption(o =>
     o.setName('min_players').setDescription('Minimum players'))
   .addIntegerOption(o =>

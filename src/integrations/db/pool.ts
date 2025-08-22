@@ -1,5 +1,5 @@
 import knex from 'knex';
-import { ensureSchema } from './ensure-schema';
+import { ensureSchema } from './ensure-schema.js';
 
 export const getDB = async () => {
     const db = process.env.NODE_ENV === 'test'
@@ -13,7 +13,7 @@ export const getDB = async () => {
             connection: {
                 host: process.env.DB_HOST!,
                 user: process.env.DB_USER!,
-                password: process.env.DB_PASS!,
+                password: process.env.DB_PASSWORD!,
                 database: process.env.DB_NAME!,
                 port: Number(process.env.DB_PORT ?? 3306),
             },
@@ -22,3 +22,6 @@ export const getDB = async () => {
     return db;
 }
 export const dbInstance = await getDB();
+
+
+

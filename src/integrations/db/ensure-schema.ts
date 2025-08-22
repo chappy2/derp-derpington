@@ -101,4 +101,3 @@ const safeIndex = async (db, table, columns, name) => {
     }
 }
 
-module.exports = { ensureSchema };
