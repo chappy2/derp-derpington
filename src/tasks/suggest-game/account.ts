@@ -1,7 +1,8 @@
 // src/handlers/account.ts (only using steam client; keeping logic elsewhere)
 import { ChatInputCommandInteraction } from 'discord.js';
 import { getSteamService } from '../../integrations/steam/index.js';
-import * as db from '../../model/index.js';
+import * as db from '../../model/suggest-game/index.js';
+import * as formatters from '../../formatters/suggest-game/index.js';
  
 
 export const  handleAccount=async(inter: ChatInputCommandInteraction) =>{
@@ -15,19 +16,19 @@ export const  handleAccount=async(inter: ChatInputCommandInteraction) =>{
         const resolved = await steam.resolveSteamId(input);
         await db.linkSteam(inter.user.id, resolved.steamId64, resolved.vanity ?? null);
 
-        return inter.editReply(`Linked: steamId64=${resolved.steamId64}${resolved.vanity ? `, vanity=${resolved.vanity}` : ''}`);
+        return inter.reply({ephemeral:true, content: formatters.formatLinkAccount(resolved) });
     }
 
     if (sub === 'status') {
         const steamUser=await db.getSteamAccount(inter.user.id)
         const owned = await steam.getOwnedGames(steamUser.steam_id64);
-        return inter.reply({ ephemeral: true, content: `Owned games: ${owned.game_count}` });
+        return inter.reply({ ephemeral: true, content:  formatters.formatStatusAccount(owned) });
     }
 
     if (sub === 'unlink') {
-
-        return inter.reply({ ephemeral: true, content: 'Unlinked (fake, nothing happens right now XD).' });
+        // TODO do an unlink here!
+        return inter.reply({ ephemeral: true, content: formatters.unlinkAccount() });
     }
 
-    return inter.reply({ ephemeral: true, content: 'Unknown subcommand.' });
+    return inter.reply({ ephemeral: true, content: formatters.unknownSubcommand(sub) });
 }

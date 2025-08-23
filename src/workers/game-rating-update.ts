@@ -1,5 +1,5 @@
 import { getTwitchService } from "../integrations/igdb/index.js";
-import * as db from '../model/index.js';
+import * as db from '../model/suggest-game/index.js';
 
 
 

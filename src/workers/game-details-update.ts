@@ -1,5 +1,5 @@
 import { getSteamService } from "../integrations/steam/index.js";
-import * as db from '../model/index.js';
+import * as db from '../model/suggest-game/index.js';
 
 export async function enrichGameDetails(limit:number=50) {
       const steam = getSteamService(); 

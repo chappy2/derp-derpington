@@ -1,4 +1,4 @@
-import { Game, GameSuggestions } from "../model/index.js";
+import { Game, GameSuggestions } from "../../model/suggest-game/index.js";
 import { mentionById } from "./generic.js";
 import { OwnerLike } from "./types.js";
 

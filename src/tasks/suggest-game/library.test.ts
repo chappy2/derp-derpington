@@ -23,7 +23,7 @@ vi.mock('../../integrations/steam/index', () => {
 });
 
 // import REAL db + handler (no db mocks)
-import * as db from '../../integrations/db/index.js';
+import * as db from '../../model/index.js';
 import { handleLibrary } from './library.js';
 
 // minimal discord interaction mock
@@ -75,7 +75,7 @@ describe('/library', () => {
     // reply flow
     expect(spies.deferReply).toHaveBeenCalledWith({ ephemeral: true });
     expect(spies.editReply).toHaveBeenCalledTimes(1);
-    expect(spies.editReply.mock.calls[0][0]).toMatch(/Synced 3 games/i);
+    expect(spies.editReply.mock.calls[0][0].content).toBe("Synced 3 games for undefined.");
 
     // real DB assertions
     const games = await db.dbInstance('games').orderBy('app_id', 'asc');
@@ -96,7 +96,7 @@ describe('/library', () => {
     expect(spies.reply).toHaveBeenCalledTimes(1);
     const arg = spies.reply.mock.calls[0][0] as { content: string; ephemeral?: boolean };
     expect(arg.ephemeral).toBe(true);
-    expect(arg.content).toMatch(/has no games synced/i);
+    expect(arg.content).toBe("**undefined** has no games in their library.");
   });
 
   it('stats shows totals after sync', async () => {

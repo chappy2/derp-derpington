@@ -1,7 +1,9 @@
 import { ChatInputCommandInteraction, Formatters } from 'discord.js';
-import { getPrefsForUsers, getRankedGamesForAny, getCommonGamesForAll } from '../../model/suggestions.js';
-import * as formatters from '../../formatters/index.js';
-import { SortDir, SuggestFilters, SuggestOptions, SuggestSort } from '../../model/types.js';
+import { getPrefsForUsers, getRankedGamesForAny, getCommonGamesForAll } from '../../model/suggest-game/suggestions.js';
+import * as formatters from '../../formatters/suggest-game/index.js';
+import { SortDir, SuggestFilters, SuggestOptions, SuggestSort } from '../../model/suggest-game/types.js';
+import { modeDefined, anyTrue, minDefined, maxDefined } from '../../utils.js';
+import { group } from 'console';
 
 export async function handleSuggest(inter: ChatInputCommandInteraction) {
   const users = [
@@ -16,8 +18,8 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
   }
 
   // explicit options (override prefs)
-  //const opt_minPlayers = inter.options.getInteger('min_players') ?? undefined;
-  //const opt_maxPlayers = inter.options.getInteger('max_players') ?? undefined;
+  const opt_minPlayers = inter.options.getInteger('min_players') ?? undefined;
+  const opt_maxPlayers = inter.options.getInteger('max_players') ?? undefined;
   const opt_genre = inter.options.getString('genre') ?? undefined;
   const opt_ownedBy = (inter.options.getString('owned_by') as 'all' | 'any' | null) ?? 'all';
   const opt_orderBy = inter.options.getString('order_by') ?? 'rating';
@@ -32,9 +34,9 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
 
   // derive defaults from prefs when option not provided:
   // min_players: max of user mins
-  const pref_min = undefined //maxDefined(prefs.map(p => p.min_players));
+  //const pref_min = maxDefined(prefs.map(p => p.min_players));
   // max_players: min of user maxes
-  const pref_max = undefined //minDefined(prefs.map(p => p.max_players));
+  //const pref_max = minDefined(prefs.map(p => p.max_players));
   // genre: most common non-null
   const pref_genre = modeDefined(prefs.map(p => p.genre));
   // crossplay: true if any user explicitly requires it (OR)
@@ -42,9 +44,11 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
   // budget: min budget among users
   const pref_budget_c = minDefined(prefs.map(p => p.budget_cents));
 
+  const groupSize = users.length;
+
   const filters: SuggestFilters = {
-    min_players: 1,//opt_minPlayers ?? pref_min ?? undefined,
-    max_players: users.length,//opt_maxPlayers ?? pref_max ?? undefined,
+   minPlayers : opt_minPlayers ?? groupSize,
+   maxPlayers : opt_maxPlayers ?? groupSize,
     genre: opt_genre ?? pref_genre ?? undefined,
     max_price_cents: (opt_maxPrice != null ? opt_maxPrice * 100 : undefined) ?? pref_budget_c ?? undefined,
     crossplay: opt_crossplay ?? pref_cross ?? undefined,
@@ -69,21 +73,3 @@ export async function handleSuggest(inter: ChatInputCommandInteraction) {
   return inter.editReply(lines.join('\n'));
 }
 
-// helpers
-function maxDefined(nums: Array<number | null | undefined>) {
-  const arr = nums.filter((n): n is number => n != null);
-  return arr.length ? Math.max(...arr) : undefined;
-}
-function minDefined(nums: Array<number | null | undefined>) {
-  const arr = nums.filter((n): n is number => n != null);
-  return arr.length ? Math.min(...arr) : undefined;
-}
-function modeDefined(vals: Array<string | null | undefined>) {
-  const arr = vals.filter((v): v is string => !!v);
-  if (!arr.length) return undefined;
-  const counts = arr.reduce((m, v) => (m.set(v, (m.get(v) ?? 0) + 1), m), new Map<string, number>());
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-}
-function anyTrue(bools: Array<boolean | null | undefined>) {
-  return bools.some(b => b === true) ? true : undefined;
-}

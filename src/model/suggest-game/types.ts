@@ -49,6 +49,8 @@ export type OwnedGame = Playtimes & {
   discordUserId: string,
 }
 
+export type OwnedGameWithDetails = OwnedGame & Game;
+
 
 export type Preferences = {
     genre?: string | null;

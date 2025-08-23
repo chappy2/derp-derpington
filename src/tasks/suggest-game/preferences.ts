@@ -1,8 +1,9 @@
 import { ChatInputCommandInteraction, User } from 'discord.js';
-import * as db from '../../model/index.js';
-import { mention } from '../../formatters/generic.js';
+import * as db from '../../model/suggest-game/index.js';
+import * as formatters from '../../formatters/suggest-game/index.js';
 
-export const  handlePrefs=async(inter: ChatInputCommandInteraction) => {
+
+export const handlePrefs = async (inter: ChatInputCommandInteraction) => {
   const sub = inter.options.getSubcommand(true);
 
   if (sub === 'set') {
@@ -11,51 +12,31 @@ export const  handlePrefs=async(inter: ChatInputCommandInteraction) => {
     const max_players = inter.options.getInteger('max_players') ?? null;
     const crossplay = inter.options.getBoolean('crossplay') ?? null;
     const budget = inter.options.getInteger('budget') ?? null; // EUR
+    const budget_cents = budget != null ? budget * 100 : null;
 
-    await db.setPrefs(inter.user.id, {
+    const prefs: Partial<db.Preferences> = {
       genre,
       min_players,
       max_players,
       crossplay,
-      budget_cents: budget != null ? budget * 100 : null,
-    });
-
-    const lines = [
-      `Saved preferences:`,
-      genre ? `• genre: ${genre}` : null,
-      min_players != null ? `• min_players: ${min_players}` : null,
-      max_players != null ? `• max_players: ${max_players}` : null,
-      crossplay != null ? `• crossplay: ${crossplay ? 'yes' : 'no'}` : null,
-      budget != null ? `• budget: €${budget}` : null,
-    ].filter(Boolean);
-
-    return inter.reply({ ephemeral: true, content: lines.join('\n') || 'Saved (empty) preferences.' });
+      budget_cents,
+    };
+    await db.setPrefs(inter.user.id, prefs);
+    return inter.reply({ ephemeral: true, content: formatters.formatSetPrefs(prefs) });
   }
 
   if (sub === 'get') {
     const user = inter.options.getUser('user') ?? inter.user;
     const p = await db.getPrefs(user.id);
-    if (!p) {
-      return inter.reply({ ephemeral: true, content: `${mention(user)} has no saved preferences.` });
-    }
-    const lines = [
-      `**${mention(user)}** preferences:`,
-      p.genre ? `• genre: ${p.genre}` : null,
-      p.min_players != null ? `• min_players: ${p.min_players}` : null,
-      p.max_players != null ? `• max_players: ${p.max_players}` : null,
-      p.crossplay != null ? `• crossplay: ${p.crossplay ? 'yes' : 'no'}` : null,
-      p.budget_cents != null ? `• budget: €${(p.budget_cents / 100).toFixed(0)}` : null,
-    ].filter(Boolean);
-
-    return inter.reply({ ephemeral: true, content: lines.join('\n') });
+    return inter.reply({ ephemeral: true, content: formatters.formatGetPrefs(user, p) });
   }
 
   if (sub === 'reset') {
     await db.resetPrefs(inter.user.id);
-    return inter.reply({ ephemeral: true, content: 'Preferences reset.' });
+    return inter.reply({ ephemeral: true, content: formatters.formatResetPrefs(inter.user) });
   }
 
-  return inter.reply({ ephemeral: true, content: 'Unknown subcommand.' });
+  return inter.reply({ ephemeral: true, content: formatters.unknownSubcommand(sub) });
 }
 
 

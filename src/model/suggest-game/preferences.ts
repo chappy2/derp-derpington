@@ -1,4 +1,4 @@
-import { dbInstance } from './pool.js';
+import { dbInstance } from '../pool.js';
 import { ensureUser } from './account.js';
 import { Preferences } from './types.js';
 

@@ -1,22 +1,16 @@
-import { dbInstance } from './pool.js';
+import { dbInstance } from '../pool.js';
 import { GameSuggestions, SortDir, SuggestFilters, SuggestOptions, SuggestSort } from './types.js';
 
-// already have: ensureUser, setPrefs, getPrefs, resetPrefs, upsertGames, upsertOwnership, getGamesForUser, etc.
 
-// Bulk fetch prefs for multiple users
-export async function getPrefsForUsers(userIds: string[]) {
+export const getPrefsForUsers=async(userIds: string[]) =>{
   if (!userIds.length) return [];
   return dbInstance('prefs').whereIn('discord_user_id', userIds);
 }
 
 
-// in ../../integrations/db.ts (or wherever applySuggestFilters lives)
-function applySuggestFilters(qb: any, filters: SuggestFilters) {
-  // WAS: qb.andWhere('g.players_min', '<=', filters.min_players)
-  if (filters.min_players != null) qb.andWhere('g.players_min', '>=', filters.min_players);
-
-  // WAS: qb.andWhere('g.players_max', '>=', filters.max_players)
-  if (filters.max_players != null) qb.andWhere('g.players_max', '<=', filters.max_players);
+const applySuggestFilters=(qb: any, filters: SuggestFilters) =>{
+   if (filters.min_players != null) qb.andWhere('g.players_min', '<=', filters.min_players);
+  if (filters.max_players != null) qb.andWhere('g.players_max', '>=', filters.max_players);
 
   if (filters.crossplay != null) qb.andWhere('g.crossplay', filters.crossplay);
 
@@ -39,21 +33,20 @@ function applySuggestFilters(qb: any, filters: SuggestFilters) {
 }
 
 
-function makeOwnershipBase(userIds: string[]) {
+const makeOwnershipBase=(userIds: string[])=> {
+  const isTest = process.env.NODE_ENV === 'test'; // SQLite in tests
+
+  const ownerCsvExpr = isTest
+    ? "GROUP_CONCAT(o.discord_user_id) AS owner_ids_csv" // SQLite: no DISTINCT/ORDER/SEPARATOR
+    : "GROUP_CONCAT(DISTINCT o.discord_user_id ORDER BY o.discord_user_id SEPARATOR ',') AS owner_ids_csv";
+
   return dbInstance('ownership as o')
     .whereIn('o.discord_user_id', userIds)
     .groupBy('o.app_id')
     .select('o.app_id')
-    // owners count
     .countDistinct({ owners: 'o.discord_user_id' })
-    // total playtime (NULL-safe)
     .select(dbInstance.raw('COALESCE(SUM(o.playtime_forever), 0) AS total_playtime'))
-    // list of owners (CSV)
-    .select(
-      dbInstance.raw(
-        "GROUP_CONCAT(DISTINCT o.discord_user_id ORDER BY o.discord_user_id SEPARATOR ',') AS owner_ids_csv"
-      )
-    );
+    .select(dbInstance.raw(ownerCsvExpr));
 }
 
 /** Games owned by ALL users (intersection) *//** Games owned by ALL users (intersection) */
@@ -111,7 +104,6 @@ export const getOrdering = (sortBy: SuggestSort, sortDir: SortDir) => {
     default:
       orderBy = [{ column: 'x.owners', order: sortDir }, { column: 'x.total_playtime', order: 'desc' }];
   }
-  console.log(`Ordering by: ${JSON.stringify(orderBy)}`);
   return orderBy;
 }
 

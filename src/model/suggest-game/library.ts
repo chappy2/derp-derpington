@@ -1,5 +1,5 @@
-import { GAME_DATA_UPDATE_INTERVAL_IN_DAYS } from '../config.js';
-import { dbInstance } from './pool.js';
+import { GAME_DATA_UPDATE_INTERVAL_IN_DAYS } from '../../config.js';
+import { dbInstance } from '../pool.js';
 import { Game, GameData, MultiplayerData, Playtimes, Ranking, Tags } from './types.js';
 /**
  * Ensure a game exists in the catalog

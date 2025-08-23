@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import * as db from '../../integrations/db/index.js';
+import * as db from '../../model/index.js';
 import { handlePrefs } from './preferences.js';
 
 function makeInteraction(

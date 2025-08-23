@@ -1,5 +1,5 @@
 // src/store.ts
-import { dbInstance } from './pool.js';
+import { dbInstance } from '../pool.js';
 
 
 

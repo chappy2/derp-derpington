@@ -64,11 +64,11 @@ describe('handleAccount (REST-style steam mock)', () => {
     await handleAccount(interaction);
 
     expect(spies.deferReply).toHaveBeenCalledWith({ ephemeral: true });
-    expect(spies.editReply).toHaveBeenCalledTimes(1);
+    expect(spies.reply).toHaveBeenCalledTimes(1);
 
-    const arg = spies.editReply.mock.calls[0][0] as string;
-    expect(arg).toMatch(/^Linked: steamId64=76561198000000001/);
-    expect(arg).toContain(', vanity=myVanity');
+    const arg = spies.reply.mock.calls[0][0] as any;
+    expect(arg.content).toMatch(/^Linked: steamId64=76561198000000001/);
+    expect(arg.content).toContain(', vanity=myVanity');
   });
 
   it('handles /account status: replies with owned games count (from REST mock)', async () => {
@@ -90,7 +90,7 @@ describe('handleAccount (REST-style steam mock)', () => {
     expect(spies.reply).toHaveBeenCalledTimes(1);
     const arg = spies.reply.mock.calls[0][0] as { content: string; ephemeral?: boolean };
     expect(arg.ephemeral).toBe(true);
-    expect(arg.content).toMatch("Unlinked (fake, nothing happens right now XD).");
+    expect(arg.content).toMatch("Unlinked (not implemented yet, nothing happens right now XD).");
   });
 
   it('handles unknown subcommand: replies with "Unknown subcommand."', async () => {
@@ -100,6 +100,6 @@ describe('handleAccount (REST-style steam mock)', () => {
 
     expect(spies.reply).toHaveBeenCalledTimes(1);
     const arg = spies.reply.mock.calls[0][0] as { content: string };
-    expect(arg.content).toBe('Unknown subcommand.');
+    expect(arg.content).toBe('Unknown subcommand: `nope`');
   });
 });

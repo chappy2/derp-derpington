@@ -1,9 +1,25 @@
-
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { dbInstance } from '../../integrations/db/pool.js';
+import { dbInstance } from '../../model/index.js';
 import { handleSuggest } from './suggestions.js';
+import * as formatters from '../../formatters/suggest-game/index.js';
+
+const isGame = (lines: string[], name: string) =>
+  lines.some(l => l.includes(`**${name}**`));
+
+const indexOfGame = (lines: string[], name: string) =>
+  lines.findIndex(l => l.includes(`**${name}**`));
+
+const countMentions = (line: string) =>
+  (line.match(/<@/g) || []).length;
+
+
+// ---- Mock: formatters.formatGameLines -> gibt einfache Zeilen mit den Rohfeldern zurück
+vi.spyOn(formatters, 'formatGameLines').mockImplementation((rows: any[]) => {
+  return rows.map(r =>
+    `${r.name}|owners=${r.owners}|play=${r.total_playtime}|csv=${r.owner_ids_csv ?? ''}|rating=${r.rating ?? ''}`
+  );
+});
 
 // minimal interaction
 function makeInteraction(opts: {
@@ -11,6 +27,8 @@ function makeInteraction(opts: {
   owned_by?: 'all' | 'any';
   min_players?: number; max_players?: number;
   genre?: string; max_price?: number; crossplay?: boolean;
+  order_by?: 'rating' | 'owners' | 'playtime' | 'name';
+  order_dir?: 'asc' | 'desc';
 }) {
   const deferReply = vi.fn().mockResolvedValue(undefined);
   const editReply = vi.fn().mockResolvedValue(undefined);
@@ -26,10 +44,16 @@ function makeInteraction(opts: {
         if (!id && required) throw new Error(`${name} required`);
         return id ? ({ id } as any) : null;
       },
-      getString: (n: string) => (n === 'genre' ? (opts.genre ?? null) : n === 'owned_by' ? (opts.owned_by ?? null) : null),
-      getInteger: (n: string) => n === 'min_players' ? (opts.min_players ?? null)
-                         : n === 'max_players' ? (opts.max_players ?? null)
-                         : n === 'max_price' ? (opts.max_price ?? null) : null,
+      getString: (n: string) =>
+        n === 'genre'     ? (opts.genre ?? null)     :
+        n === 'owned_by'  ? (opts.owned_by ?? null)  :
+        n === 'order_by'  ? (opts.order_by ?? null)  :
+        n === 'order_dir' ? (opts.order_dir ?? null) : null,
+      getInteger: (n: string) =>
+        n === 'min_players' ? (opts.min_players ?? null)
+      : n === 'max_players' ? (opts.max_players ?? null)
+      : n === 'max_price'   ? (opts.max_price ?? null)
+      : null,
       getBoolean: (n: string) => n === 'crossplay' ? (opts.crossplay ?? null) : null,
     } as any,
     deferReply: deferReply as any,
@@ -41,7 +65,6 @@ function makeInteraction(opts: {
   return { inter: inter as ChatInputCommandInteraction, spies: { deferReply, editReply, reply } };
 }
 
-
 async function seed() {
   await dbInstance('ownership').del().catch(()=>{});
   await dbInstance('games').del().catch(()=>{});
@@ -51,20 +74,20 @@ async function seed() {
   const U1 = '111', U2 = '222';
   await dbInstance('users').insert([{ discord_user_id: U1 }, { discord_user_id: U2 }]);
 
-  // prefs: both want Co-op, 2–4 players, crossplay true, budgets 15€ and 20€
+  // prefs: beide Co-op, 2–4 Spieler, crossplay true, Budgets 15€ / 20€
   await dbInstance('prefs').insert([
     { discord_user_id: U1, genre: 'Co-op', min_players: 2, max_players: 4, crossplay: 1, budget_cents: 1500 },
     { discord_user_id: U2, genre: 'Co-op', min_players: 2, max_players: 4, crossplay: 1, budget_cents: 2000 },
   ]);
 
-  // games: only Alpha matches genre+players+crossplay and price
+  // ⚠️ WICHTIG: rating mitgeben, da in SELECT 'g.rating' vorkommt
   await dbInstance('games').insert([
-    { app_id: 1, name: 'Alpha',   players_min: 2, players_max: 4, crossplay: 1, is_free: 0, price_cents: 999,  currency: 'EUR', tags_json: '["Co-op"]' },
-    { app_id: 2, name: 'Bravo',   players_min: 1, players_max: 2, crossplay: 0, is_free: 1,                    tags_json: '["Action"]' },
-    { app_id: 3, name: 'Charlie', players_min: 3, players_max: 5, crossplay: 1, is_free: 0, price_cents: 2999, currency: 'EUR', tags_json: '["Co-op"]' },
+    { app_id: 1, name: 'Alpha',   players_min: 2, players_max: 4, crossplay: 1, is_free: 0, price_cents:  999, currency: 'EUR', tags_json: '["Co-op"]',  rating: 80 },
+    { app_id: 2, name: 'Bravo',   players_min: 1, players_max: 2, crossplay: 0, is_free: 1,               currency: 'EUR', tags_json: '["Action"]',      rating: 40 },
+    { app_id: 3, name: 'Charlie', players_min: 3, players_max: 5, crossplay: 1, is_free: 0, price_cents: 2999, currency: 'EUR', tags_json: '["Co-op"]',  rating: 70 },
   ]);
 
-  // ownership: U1 owns Alpha+Bravo, U2 owns Alpha+Charlie
+  // Besitz: U1 -> Alpha+Bravo, U2 -> Alpha+Charlie
   await dbInstance('ownership').insert([
     { discord_user_id: U1, app_id: 1, playtime_forever: 120 },
     { discord_user_id: U1, app_id: 2, playtime_forever: 20 },
@@ -80,35 +103,88 @@ beforeEach(async () => {
 });
 
 describe('/suggest with prefs (integration)', () => {
-  it('uses prefs as defaults when options are not provided', async () => {
+  it('ALL: nutzt Prefs als Defaults und liefert Schnittmenge inkl. owners/total_playtime/csv', async () => {
     const { U1, U2 } = await seed();
 
-    const { inter, spies } = makeInteraction({ player1: U1, player2: U2, owned_by: 'all' });
+    const { inter, spies } = makeInteraction({
+      player1: U1, player2: U2, owned_by: 'all',
+      // explizit nach Playtime sortieren, damit deterministisch
+      order_by: 'playtime', order_dir: 'desc'
+    });
     await handleSuggest(inter);
 
     expect(spies.deferReply).toHaveBeenCalled();
     const msg = spies.editReply.mock.calls[0][0] as string;
+    expect(msg).not.toBe("No matching games found. Try relaxing filters or set owned_by=any."); // Antwort da
+    // eine Zeile pro Game (hier nur Alpha erwartet)
+    const lines = msg.split('\n').filter(Boolean);
+    expect(lines.length).toBeGreaterThan(0);
+    // Alpha muss drin sein, Bravo/Charlie nicht (ALL + Prefs)
+    expect(lines.some(l => l.startsWith('Alpha|'))).toBe(true);
+    expect(lines.some(l => l.startsWith('Bravo|'))).toBe(false);
+    expect(lines.some(l => l.startsWith('Charlie|'))).toBe(false);
 
-    // Should pick Alpha (fits Co-op, 2-4, crossplay true, <= 15€) and is intersection of both users
-    expect(msg).toContain('Alpha');
-    expect(msg).not.toContain('Bravo');
-    expect(msg).not.toContain('Charlie');
+    // Prüfe Aggregat-Werte von Alpha:
+    const alpha = lines.find(l => l.startsWith('Alpha|'))!;
+    // Owner CSV enthält beide IDs (Reihenfolge egal)
+    expect(alpha).toMatch(/csv=.*111.*222|csv=.*222.*111/);
+    // total_playtime = 120 + 60 = 180
+    expect(alpha).toContain('play=180');
+    // owners = 2
+    expect(alpha).toContain('owners=2');
   });
 
-  it('explicit options override prefs (e.g., min_players=3 allows Charlie with owned_by=any)', async () => {
+  it('ANY: explizite Optionen überschreiben Prefs (min_players=3 lässt Charlie zu) & sort by rating', async () => {
     const { U1, U2 } = await seed();
 
     const { inter, spies } = makeInteraction({
       player1: U1,
       player2: U2,
       owned_by: 'any',
-      min_players: 3, // overrides pref 2
-      max_players: 5, 
-      max_price: 30, // <-- allow Charlie (€29.99)
+      min_players: 3,
+      max_players: 5,
+      max_price: 30, // 29.99€ zulassen
+      order_by: 'rating',
+      order_dir: 'desc'
     });
     await handleSuggest(inter);
 
     const msg = spies.editReply.mock.calls[0][0] as string;
-    expect(msg).toContain('Charlie'); // 3–5 players
+    expect(msg).not.toBe("No matching games found. Try relaxing filters or set owned_by=any."); // Antwort da
+
+    const lines = msg.split('\n').filter(Boolean);
+    // Charlie sollte erscheinen
+    expect(lines.some(l => l.startsWith('Charlie|'))).toBe(true);
+    // Alpha kann ebenfalls erscheinen, aber Bravo (1–2 Spieler) nicht
+    expect(lines.some(l => l.startsWith('Bravo|'))).toBe(false);
+
+    expect(lines.some(l => l.startsWith('Alpha|'))).toBe(true);
+    // Bei rating desc: Alpha(80) vor Charlie(70)
+    const alphaIdx = lines.findIndex(l => l.startsWith('Alpha|'));
+    const charlieIdx = lines.findIndex(l => l.startsWith('Charlie|'));
+    if (alphaIdx !== -1 && charlieIdx !== -1) {
+      expect(alphaIdx).toBeLessThan(charlieIdx);
+    }
+  });
+
+  it('Sortierung: owners-first ordnet nach Besitzerzahl, dann Playtime', async () => {
+    const { U1, U2 } = await seed();
+
+    const { inter, spies } = makeInteraction({
+      player1: U1, player2: U2, owned_by: 'any',
+      order_by: 'owners', order_dir: 'desc'
+    });
+    await handleSuggest(inter);
+
+    const msg = spies.editReply.mock.calls[0][0] as string;
+    expect(msg).not.toBe("No matching games found. Try relaxing filters or set owned_by=any."); // Antwort da
+
+    const lines = msg.split('\n').filter(Boolean);
+
+    // Alpha hat 2 Owner; Bravo/Charlie jeweils 1 -> Alpha sollte vor den anderen stehen
+    const alphaIdx = lines.findIndex(l => l.startsWith('Alpha|'));
+    const others = lines.filter(l => !l.startsWith('Alpha|'));
+    expect(alphaIdx).toBe(0);
+    expect(others.every(l => /owners=1/.test(l))).toBe(true);
   });
 });
