@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 /**
  * Creates/updates tables for:
  * - users
