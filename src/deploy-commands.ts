@@ -1,4 +1,5 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { suggestCmd, prefsCmd, libraryCmd, accountCmd } from './commands.js';
 
 const commands = [
   new SlashCommandBuilder()
@@ -19,14 +20,18 @@ const commands = [
     .setDescription("Ziehe eine kreative Challenge.")
     .addStringOption(option =>
       option.setName("rubrik")
-        .setDescription("Welche Rubrik? (z. B. tierwesen, ort)")
+        .setDescription("Welche Rubrik? (z. B. tierwesen, ort)")
         .setRequired(false)
     )
     .addIntegerOption(option =>
       option.setName("anzahl")
         .setDescription("Wie viele Einträge?")
         .setRequired(false)
-    ).toJSON()
+    ).toJSON(),
+  suggestCmd.toJSON(),
+  prefsCmd.toJSON(),
+  libraryCmd.toJSON(),
+  accountCmd.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);

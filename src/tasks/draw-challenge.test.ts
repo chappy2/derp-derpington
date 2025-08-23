@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { faker } from '@faker-js/faker';
-import { ORTE, RUBRIKEN } from './draw-challenge'; 
+import { ORTE, RUBRIKEN } from './draw-challenge.js'; 
 import { CommandInteraction } from 'discord.js';
-import { handleDrawChallenge } from './draw-challenge';
+import { handleDrawChallenge } from './draw-challenge.js';
 
 vi.mock('../utils', () => ({
   randomItem: vi.fn(),
@@ -34,7 +34,7 @@ describe('handleDrawChallenge', () => {
     // mock faker
     vi.spyOn(faker.animal, 'type').mockImplementationOnce(() => 'Katze').mockImplementationOnce(() => 'Hund');
 
-    await handleDrawChallenge(interaction as CommandInteraction);
+    await handleDrawChallenge(interaction as any);
 
     expect(mockReply).toHaveBeenCalledWith(
       expect.stringMatching(/^Male mir dieses Tierwesen: Katze, Hund/)
@@ -49,7 +49,7 @@ describe('handleDrawChallenge', () => {
     // mock randomItem to always return 'Dschungel'
     (randomItem as any).mockReturnValue('Dschungel');
 
-    await handleDrawChallenge(interaction as CommandInteraction);
+    await handleDrawChallenge(interaction as any);
 
     expect(mockReply).toHaveBeenCalledWith(
       'Male mir diesen Ort: Dschungel'
@@ -61,7 +61,7 @@ describe('handleDrawChallenge', () => {
     (randomItem as any).mockReturnValue('TIERWESEN');
     vi.spyOn(faker.animal, 'type').mockReturnValue('Wolf');
 
-    await handleDrawChallenge(interaction as CommandInteraction);
+    await handleDrawChallenge(interaction as any);
 
     expect(mockReply).toHaveBeenCalledWith(
       expect.stringMatching(/Male mir dieses Tierwesen: /)
@@ -73,7 +73,7 @@ describe('handleDrawChallenge', () => {
       if (name === 'rubrik') return { value: 'xyz' };
     });
 
-    await handleDrawChallenge(interaction as CommandInteraction);
+    await handleDrawChallenge(interaction as any);
 
     expect(mockReply).toHaveBeenCalledWith(
       expect.stringContaining('Aus irgendeinem Grund')

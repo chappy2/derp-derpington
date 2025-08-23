@@ -6,8 +6,9 @@
     "outDir": "./dist",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "CommonJS",
     "target": "ES2022",
+    "module": "NodeNext",              // or "Node20" on TS ≥5.4
+    "moduleResolution": "NodeNext",
     "types": [],
     // For nodejs:
     // "lib": ["esnext"],

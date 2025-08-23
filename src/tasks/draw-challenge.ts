@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction } from "discord.js";
 import { faker } from '@faker-js/faker';
-import { randomItem } from "../utils";
+import { randomItem } from "../utils.js";
 
 export const DEFAULT_COUNT = 2;
 export const RUBRIKEN = ["TIERWESEN", "ORT"];
@@ -33,7 +33,6 @@ export const ORTE = [
 
 
 export const handleDrawChallenge = async (interaction: ChatInputCommandInteraction) => {
-  console.log("🔥 draw-challenge command received");
 
   let rubrikInput = (interaction as any).options.get("rubrik")?.value as string | undefined;
   let anzahlInput = ((interaction as any).options.get("anzahl")?.value as number) | DEFAULT_COUNT;

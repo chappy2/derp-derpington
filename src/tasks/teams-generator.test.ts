@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { handleTeams } from './teams-generator';
+import { handleTeams } from './teams-generator.js';
 
 // Small helper to build a minimal mocked interaction
 function makeTeamsInteraction(anzahl: number, spielerCsv: string) {
